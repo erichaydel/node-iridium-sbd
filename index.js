@@ -469,7 +469,7 @@ function createIridium() {
 		
 		// most important function, initiates a SBD session and sends/receives messages
 		initiateSession: function(callback) {
-			iridium.AT('AT+SBDIXA', OK, /\+SBDIX/, function(err, text) {
+			iridium.AT('AT+SBDIX', OK, /\+SBDIX/, function(err, text) {
 				if (err) {
 					iridium.messagePending = 1;
 					iridium.clearMOBuffers(function() {
