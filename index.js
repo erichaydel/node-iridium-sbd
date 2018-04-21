@@ -130,7 +130,7 @@ function createIridium() {
 			if (iridium.lock) {
 				iridium.pending++;
 			} else {
-				iridium.sendMessage('');
+				iridium.sendMessage({ message: '' });
 			}
 		},
 		
@@ -138,12 +138,12 @@ function createIridium() {
 			iridium.c_attempt++;
 			if(iridium.c_attempt <= iridium.globals.maxAttempts){			
 				iridium.lock=1;
-				iridium.sendBinaryMessage(buffer, function(err, momsn) {
+				iridium.sendBinaryMessage({ message: buffer }, function(err, momsn) {
 					if (err==null) {
 						if (buffer) iridium.log('[SBD] Binary message sent successfully, assigned MOMSN ' + momsn);
 
 						// check to see if there are other messages pending - if there are, send a new mailbox check to fetch them in 1 second
-						if (iridium.pending>0) setTimeout(function() { iridium.sendMessage(''); }, 1000);
+						if (iridium.pending>0) setTimeout(function() { iridium.sendMessage({ message: '' }); }, 1000);
 						else {
 							iridium.lock=0;
 						}
@@ -163,14 +163,16 @@ function createIridium() {
 			}
 		},
 		
-		sendBinaryMessage: function(message, callback, maxWait) {
+		sendBinaryMessage: function(state, callback, maxWait) {
+      if (maxWait) state.maxWait = maxWait;
+      state.binaryMessage = true;
 		
 			if (message.length==0) {
-				iridium.sendMessage(message, callback, maxWait);
+				iridium.sendMessage(state, callback, maxWait);
 				return;
 			}
 
-			const buffer = (Buffer.isBuffer(message)) ? message : Buffer.from(message);	
+			const buffer = (Buffer.isBuffer(state.message)) ? state.message : Buffer.from(state.message);	
 
 			const command = 'AT+SBDWB=' + buffer.length;
 
@@ -216,7 +218,7 @@ function createIridium() {
 						}
 						iridium.messagePending=2;
 						iridium.disableSignalMonitoring(function(xcallback) {
-							iridium.initiateSession(callback);
+							iridium.initiateSession(state, callback);
 						});
 					}, iridium.globals.maxWait);
 				});
@@ -224,10 +226,11 @@ function createIridium() {
 		},
 
 		// send a message via SBD and call back when done
-		sendMessage: function(message, callback, maxWait) {
+		sendMessage: function(state, callback, maxWait) {
+      if (maxWait) state.maxWait = maxWait;
 		
 			// if no message is given, this is a mailbox check, so clear the MO storage
-			const command = message ? 'AT+SBDWT=' + message : 'AT+SBDD0'; 
+			const command = state.message ? 'AT+SBDWT=' + state.message : 'AT+SBDD0'; 
 		
 			// write the MO message, wait for network (+CIEV event)
 			// disable signal monitoring (+CIER=0) then send the message (+SBDIXA)
@@ -253,7 +256,7 @@ function createIridium() {
 		
 					iridium.messagePending=2;
 					iridium.disableSignalMonitoring(function(xcallback) {
-						iridium.initiateSession(callback);
+						iridium.initiateSession(state, callback);
 					});
 				}, maxWait);
 			});
@@ -468,7 +471,9 @@ function createIridium() {
 
 		
 		// most important function, initiates a SBD session and sends/receives messages
-		initiateSession: function(callback) {
+		initiateSession: function(state, callback) {
+      if (!state.failCount) state.failCount = 0;
+
 			iridium.AT('AT+SBDIX', OK, /\+SBDIX/, function(err, text) {
 				if (err) {
 					iridium.messagePending = 1;
@@ -486,6 +491,7 @@ function createIridium() {
 					const mtmsn = m[4];
 					const mtlen = m[5];
 					const mtqueued = m[6];
+          const maxTries = state.maxTries || 3;
 			
 					if (status<=4) {
 						iridium.log('MO message transferred successfully');
@@ -495,7 +501,12 @@ function createIridium() {
 						iridium.log('MO message failed, radio failure');
 						iridium.messagePending = 1;
 						iridium.clearMOBuffers(function() {
-							callback('radio failure');
+              if (state.failCount < maxTries) {
+                state.failCount++;
+                iridium.log(`Retry message: ${state.failCount}/${maxTries}`);
+                iridium[state.binaryMessage ? 'sendBinaryMessage' : 'sendMessage'](state, callback, state.maxWait);
+              }
+              else callback('radio failure');
 						});
 						return;
 					} 
@@ -503,7 +514,12 @@ function createIridium() {
 						iridium.log('MO message failed, network failure');
 						iridium.messagePending = 1;
 						iridium.clearMOBuffers(function() {
-							callback('network failure');
+              if (state.failCount < maxTries) {
+                state.failCount++;
+                iridium.log(`Retry message: ${state.failCount}/${maxTries}`);
+                iridium[state.binaryMessage ? 'sendBinaryMessage' : 'sendMessage'](state, callback, state.maxWait);
+              }
+              else callback('network failure');
 						});
 						return;
 					} 
@@ -511,7 +527,12 @@ function createIridium() {
 						iridium.log('MO message failed, error '+status);
 						iridium.messagePending = 1;
 						iridium.clearMOBuffers(function() {
-							callback('unknown failure');
+              if (state.failCount < maxTries) {
+                state.failCount++;
+                iridium.log(`Retry message: ${state.failCount}/${maxTries}`);
+                iridium[state.binaryMessage ? 'sendBinaryMessage' : 'sendMessage'](state, callback, state.maxWait);
+              }
+              else callback('unknown failure');
 						});
 						return;
 					}
