@@ -1,0 +1,14 @@
+---
+env:
+  browser: false
+extends:
+  - eslint:recommended
+  - airbnb-base
+  - plugin:import/errors
+  - plugin:import/warnings
+  - plugin:lodash-fp/recommended
+plugins:
+  - import
+  - lodash-fp
+rules:
+  semi: [2, never]
