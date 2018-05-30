@@ -10,12 +10,13 @@ $ npm install iridium-sbd
 
 ## Usage
 ```javascript
-var iridium = require('iridium-sbd');
+const createIridium = require('iridium-sbd');
+const iridium = createIridium();
 
 iridium.open({
   debug: 1, //turn debugging on
   port: "/dev/ttyUSB0",
-  flowControl: true //set to false to disable flowControl on the SBD for 3-wire UART setups 
+  flowControl: true //set to false to disable flowControl on the SBD for 3-wire UART setups
 });
 
 iridium.on('initialized', function() {
@@ -24,7 +25,7 @@ iridium.on('initialized', function() {
   iridium.sendCompressedMessage("Hello world!", function(err,momsn){
     console.log("Message Sent!");
   });
-  
+
 });
 
 iridium.on('ringalert', function() {
@@ -48,5 +49,3 @@ iridium.on('debug',function(log){
 
  - Razvan Dragomirescu's original Iridium SDB node.js library. [http://www.veri.fi/iridiumsbd.tar.gz](http://www.veri.fi/iridiumsbd.tar.gz)
  - Rock Seven - RockBlock (Iridium 9602). [https://www.rock7.com/](https://www.rock7.com/)
- 
- 
