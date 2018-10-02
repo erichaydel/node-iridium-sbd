@@ -599,7 +599,7 @@ function createIridium() {
       if (!timeout) timeout=iridium.globals.defaultTimeout; // general timeout 60 seconds
       if (timeout>0) tf = setTimeout(function() {
         iridium.log('Sending a timeout event for command '+command);
-        datafunction('TIMEOUT');
+        datafunction();
       }, timeout);
 
       if (command instanceof Buffer) {
