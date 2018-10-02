@@ -371,7 +371,7 @@ function createIridium() {
     },
 
     waitForNetwork: function(callback, maxWait) {
-      iridium.ATS('AT+CIER=1,1,0,0', /\+CIEV:0,[^0]/, ALL, callback, iridium.globals.maxWait?iridium.globals.maxWait:iridium.globals.timeoutForever);
+      iridium.ATS('AT+CIER=1,1,0,0', /\+CIEV:0,[^0]/, ALL, callback, maxWait ? maxWait : iridium.globals.timeoutForever);
     },
 
     getSystemTime: function(callback) {
@@ -599,7 +599,7 @@ function createIridium() {
       if (!timeout) timeout=iridium.globals.defaultTimeout; // general timeout 60 seconds
       if (timeout>0) tf = setTimeout(function() {
         iridium.log('Sending a timeout event for command '+command);
-        //datafunction('TIMEOUT');
+        datafunction('TIMEOUT');
       }, timeout);
 
       if (command instanceof Buffer) {
